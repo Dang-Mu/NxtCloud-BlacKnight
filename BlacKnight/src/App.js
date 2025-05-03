@@ -1,10 +1,11 @@
 // src/App.js
 import React, { useState } from "react";
-import { Container, Row, Col, Alert, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Alert } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 
 // 컴포넌트 가져오기
+import Header from "./components/Header";
 import ImageSection from "./components/ImageSection";
 import PDFSourceSection from "./components/PDFSourceSection";
 import RequirementsSection from "./components/RequirementsSection";
@@ -13,8 +14,9 @@ import ModificationSection from "./components/ModificationSection";
 
 // API 서비스 가져오기
 import { generateArticle } from "./services/api";
+import { saveArticle, highlightChanges } from "./utils/textUtils";
 
-function App() {
+function App({ user, onLogout }) {
   // 상태 관리
   const [pdfContent, setPdfContent] = useState(null);
   const [article, setArticle] = useState("");
@@ -49,6 +51,11 @@ function App() {
       return;
     }
 
+    // 조직 정보가 없으면 사용자 조직 정보 사용
+    if (!formData.organization && user?.organization) {
+      formData.organization = user.organization;
+    }
+
     const prompt = `
       다음 정보를 바탕으로 기사를 작성해주세요:
       형식 참고 예시: ${pdfContent}
@@ -57,7 +64,7 @@ function App() {
       업체명: ${formData.company}
       핵심 키워드: ${formData.keywords}
       추가 내용: ${formData.additional}
-      최종 결과물은 한글로 1000자 이상이어야 한다
+      최종 결과물은 한글로 1000자 이상이어야한다
     `;
 
     setIsLoading(true);
@@ -69,7 +76,6 @@ function App() {
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
       }
     } catch (error) {
-      console.error("기사 생성 오류:", error);
       showNotification(`기사 생성 중 오류 발생: ${error.message}`, "danger");
     } finally {
       setIsLoading(false);
@@ -101,7 +107,9 @@ function App() {
       if (modifiedArticle) {
         setPreviousArticle(article);
         setArticle(modifiedArticle);
-        setHighlightedDiff(modifiedArticle); // 실제로는 highlightChanges 함수에서 처리
+        // 변경 사항 하이라이트
+        const diff = highlightChanges(article, modifiedArticle);
+        setHighlightedDiff(diff);
         showNotification("흑기사가 수정을 완료했습니다.", "success");
       }
     } catch (error) {
@@ -112,77 +120,85 @@ function App() {
   };
 
   return (
-    <Container fluid className="app-container">
-      <h1 className="text-gray font-italic">BlacKnight : 📰 ✍ ♞</h1>
-      <h4 className="text-gray font-italic">AI 기사 생성 및 수정 흑기사</h4>
-      <hr className="divider-gray" />
+    <>
+      <Header user={user} onLogout={onLogout} />
 
-      <Row>
-        <Col md={6}>
-          {/* 왼쪽 섹션: 이미지 및 PDF 소스 */}
-          <ImageSection />
-          <PDFSourceSection onSetPdfContent={handleSetPdfContent} />
-        </Col>
+      <Container fluid className="app-container">
+        {user && (
+          <div className="user-welcome mb-4">
+            <h2>
+              안녕하세요, {user.organization ? `${user.organization}` : ""}
+              {user.role === "admin" && " (관리자)"}님
+            </h2>
+            <p className="text-muted">
+              {user.role === "admin"
+                ? "관리자 모드로 접속 중입니다."
+                : "일반 사용자 모드로 접속 중입니다."}
+            </p>
+          </div>
+        )}
 
-        <Col md={6}>
-          {/* 오른쪽 섹션: 요구사항 입력 */}
-          <RequirementsSection
-            onGenerateArticle={handleGenerateArticle}
-            isLoading={isLoading}
-          />
-        </Col>
-      </Row>
+        <h1 className="text-gray font-italic">BlacKnight : 📰 ✍ ♞</h1>
+        <h4 className="text-gray font-italic">AI 기사 생성 및 수정 흑기사</h4>
+        <hr className="divider-gray" />
 
-      <hr className="divider-gray" />
+        <Row>
+          <Col md={6}>
+            {/* 왼쪽 섹션: 이미지 및 PDF 소스 */}
+            <ImageSection />
+            <PDFSourceSection onSetPdfContent={handleSetPdfContent} />
+          </Col>
 
-      {notification.show && (
-        <Alert variant={notification.type}>{notification.message}</Alert>
-      )}
+          <Col md={6}>
+            {/* 오른쪽 섹션: 요구사항 입력 */}
+            <RequirementsSection
+              onGenerateArticle={handleGenerateArticle}
+              isLoading={isLoading}
+              defaultOrganization={user?.organization || ""}
+            />
+          </Col>
+        </Row>
 
-      <Row>
-        <Col md={6}>
-          {/* 왼쪽 하단: 생성된 기사 */}
-          <ArticleSection article={article} />
-        </Col>
+        <hr className="divider-gray" />
 
-        <Col md={6}>
-          {/* 오른쪽 하단: 수정 요청 */}
-          <ModificationSection
-            article={article}
-            highlightedDiff={highlightedDiff}
-            onModifyArticle={handleModifyArticle}
-            isLoading={isLoading}
-          />
-        </Col>
-      </Row>
+        {notification.show && (
+          <Alert variant={notification.type}>{notification.message}</Alert>
+        )}
 
-      {previousArticle && article && previousArticle !== article && (
-        <>
-          <h3 className="text-gray font-italic section-header">
-            수정된 기사 전문
-          </h3>
-          <hr className="divider-gray" />
-          <div className="modified-article">{article}</div>
-          <button
-            className="btn btn-outline-secondary mt-3"
-            onClick={() => {
-              const blob = new Blob([article], {
-                type: "text/plain;charset=utf-8",
-              });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "modified_article.txt";
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-            }}
-          >
-            수정된 기사 다운로드
-          </button>
-        </>
-      )}
-    </Container>
+        <Row>
+          <Col md={6}>
+            {/* 왼쪽 하단: 생성된 기사 */}
+            <ArticleSection article={article} />
+          </Col>
+
+          <Col md={6}>
+            {/* 오른쪽 하단: 수정 요청 */}
+            <ModificationSection
+              article={article}
+              highlightedDiff={highlightedDiff}
+              onModifyArticle={handleModifyArticle}
+              isLoading={isLoading}
+            />
+          </Col>
+        </Row>
+
+        {previousArticle && article && previousArticle !== article && (
+          <>
+            <h3 className="text-gray font-italic section-header">
+              수정된 기사 전문
+            </h3>
+            <hr className="divider-gray" />
+            <div className="modified-article">{article}</div>
+            <button
+              className="btn btn-outline-secondary mt-3"
+              onClick={() => saveArticle(article, "modified_article.txt")}
+            >
+              수정된 기사 다운로드
+            </button>
+          </>
+        )}
+      </Container>
+    </>
   );
 }
 

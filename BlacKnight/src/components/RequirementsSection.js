@@ -1,9 +1,15 @@
 // src/components/RequirementsSection.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Button, Spinner } from "react-bootstrap";
 
-const RequirementsSection = ({ onGenerateArticle, isLoading }) => {
-  const [organization, setOrganization] = useState("00대학교");
+const RequirementsSection = ({
+  onGenerateArticle,
+  isLoading,
+  defaultOrganization = "",
+}) => {
+  const [organization, setOrganization] = useState(
+    defaultOrganization || "00대학교"
+  );
   const [project, setProject] = useState("2024 클라우드 AI 연구 프로젝트");
   const [company, setCompany] = useState("넥스트클라우드");
   const [keywords, setKeywords] = useState(
@@ -12,6 +18,13 @@ const RequirementsSection = ({ onGenerateArticle, isLoading }) => {
   const [additional, setAdditional] = useState(
     "ex: 00대학교 총장님 성함 000이 기사에 포함되어야합니다."
   );
+
+  // 사용자 조직이 변경되면 폼 값도 업데이트
+  useEffect(() => {
+    if (defaultOrganization) {
+      setOrganization(defaultOrganization);
+    }
+  }, [defaultOrganization]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
