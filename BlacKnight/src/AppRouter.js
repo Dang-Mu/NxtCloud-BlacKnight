@@ -6,10 +6,10 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Login from "./components/Login";
-import Register from "./components/Register";
+import Login from "./security/Login";
+import Register from "./security/Register";
 import App from "./App";
-import NotFound from "./components/NotFound";
+import NotFound from "./security/NotFound";
 import { getCurrentUser, isAuthenticated } from "./services/authService";
 
 // 인증이 필요한 라우트를 보호하는 컴포넌트

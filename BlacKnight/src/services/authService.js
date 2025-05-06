@@ -21,7 +21,7 @@ const users = [
 // 로컬 스토리지 키
 const TOKEN_KEY = "blacknight_auth_token";
 const USER_KEY = "blacknight_user";
-const INVITE_CODE_KEY = "REACT_APP_INVITE_CODE";
+//const INVITE_CODE_KEY = process.env.REACT_APP_INVITE_CODE;
 
 // 로그인 함수
 export const loginUser = async (credentials) => {

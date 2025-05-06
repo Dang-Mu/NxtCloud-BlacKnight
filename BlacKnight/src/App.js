@@ -146,7 +146,10 @@ function App({ user, onLogout }) {
           <Col md={6}>
             {/* 왼쪽 섹션: 이미지 및 PDF 소스 */}
             <ImageSection />
-            <PDFSourceSection onSetPdfContent={handleSetPdfContent} />
+            <PDFSourceSection
+              user={user}
+              onSetPdfContent={handleSetPdfContent}
+            />
           </Col>
 
           <Col md={6}>
