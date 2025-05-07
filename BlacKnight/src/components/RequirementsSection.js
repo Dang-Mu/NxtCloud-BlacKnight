@@ -16,7 +16,7 @@ const RequirementsSection = ({
     "클라우드, AI, 빅데이터, AWS, Bedrock"
   );
   const [additional, setAdditional] = useState(
-    "ex: 00대학교 총장님 성함 000이 기사에 포함되어야합니다."
+    "00대학교 총장님 성함 000이 기사에 포함되어야합니다."
   );
 
   // 사용자 조직이 변경되면 폼 값도 업데이트
@@ -90,7 +90,7 @@ const RequirementsSection = ({
             rows={3}
             value={additional}
             onChange={(e) => setAdditional(e.target.value)}
-            placeholder="추가로 포함하고 싶은 내용을 자유롭게 작성해주세요. (ex: 00대학교 총장님 성함 000이 기사에 포함되어야합니다.)"
+            placeholder="추가로 포함하고 싶은 내용을 자유롭게 작성해주세요. (예: 00대학교 총장님 성함 000이 기사에 포함되어야합니다.)"
           />
         </Form.Group>
 

@@ -16,8 +16,8 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
   const [successMessage, setSuccessMessage] = useState("");
 
   // API 엔드포인트
-  const GET_PDF_LAMBDA_URL = process.env.GET_PDF_SOURCE_LAMBDA_URL;
-  const PUT_PDF_LAMBDA_URL = process.env.PUT_PDF_SOURCE_LAMBDA_URL;
+  const GET_PDF_LAMBDA_URL = process.env.REACT_APP_GET_PDF_SOURCE_LAMBDA_URL;
+  const PUT_PDF_LAMBDA_URL = process.env.REACT_APP_PUT_PDF_SOURCE_LAMBDA_URL;
 
   // fetchTemplates 함수를 useCallback으로 메모이제이션하여 불필요한 재생성 방지
   const fetchTemplates = useCallback(async () => {
@@ -40,7 +40,7 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
         `${GET_PDF_LAMBDA_URL}?action=listTemplates`,
         {
           headers: {
-            Authorization: user.id, // 사용자 ID만 전송
+            authorization: user.id, // 사용자 ID만 전송
           },
         }
       );
@@ -98,7 +98,7 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
         )}`,
         {
           headers: {
-            Authorization: user.id, // 사용자 ID만 전송
+            authorization: user.id, // 사용자 ID만 전송
           },
         }
       );
@@ -208,7 +208,7 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
         )}`,
         {
           headers: {
-            Authorization: user.id, // 사용자 ID만 전송
+            authorization: user.id, // 사용자 ID만 전송
           },
         }
       );
@@ -257,7 +257,7 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
         )}`,
         {
           headers: {
-            Authorization: user.id, // 사용자 ID만 전송
+            authorization: user.id, // 사용자 ID만 전송
           },
         }
       );
@@ -372,7 +372,7 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
                 {loading ? (
                   <div className="text-center py-3">
                     <div className="spinner-border text-primary" role="status">
-                      <span className="sr-only">로딩 중...</span>
+                      <span className="sr-only">...</span>
                     </div>
                   </div>
                 ) : templateList.length === 0 ? (
