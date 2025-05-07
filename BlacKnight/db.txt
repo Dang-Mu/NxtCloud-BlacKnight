@@ -1,0 +1,19 @@
+# ella-blacknight-users
+  {
+    id: 2, //파티션 키
+    email: "user@example.com",
+    password: "user123",
+    organization: "00대학교",
+    role: "user",
+  },
+
+# ella-blacknight-pdfresource
+{
+  "fileId": "ownerId_1",                      // 파티션 키
+  "s3Key": "1/정책연계_관련_템플릿.pdf", // S3에 저장된 실제 경로
+  "fileName": "정책연계_관련_템플릿.pdf",
+  "ownerId": "1",                     // 파일 소유자 ID
+  "organization": "nxtcloud",                 // 소속 조직 ID
+  "isPublic": false,                        // 조직 내 공유 여부
+  "description": "기본 연차휴가신청서 양식",
+}
