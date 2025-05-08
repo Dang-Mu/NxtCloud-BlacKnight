@@ -152,18 +152,17 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
         `파일 설명: ${fileDescription}, 공유 설정: ${isPublic}`
       );
 
-      const presignedResponse = await axios.get(
-        `${PUT_PDF_LAMBDA_URL}?action=getPresignedUrl&fileName=${encodeURIComponent(
+      const presignedResponse = await axios({
+        method: "GET",
+        url: `${PUT_PDF_LAMBDA_URL}?action=getPresignedUrl&method=GET&fileName=${encodeURIComponent(
           uploadedFile.name
         )}&fileType=upload&isPublic=${isPublic}&description=${encodeURIComponent(
           fileDescription
         )}`,
-        {
-          headers: {
-            Authorization: user.id, // 사용자 ID만 전송
-          },
-        }
-      );
+        headers: {
+          Authorization: user.id,
+        },
+      });
 
       const { uploadUrl, fileMetadata } = presignedResponse.data;
       window.console.warn("Pre-signed URL 받음:", uploadUrl);
@@ -186,32 +185,30 @@ const PDFSourceSection = ({ user, onSetPdfContent }) => {
 
       // 파일 메타데이터를 DynamoDB에 저장
       window.console.warn("DynamoDB에 메타데이터 저장 중...");
-      await axios.post(
-        `${PUT_PDF_LAMBDA_URL}?action=saveFileMetadata`,
-        fileMetadata,
-        {
-          headers: {
-            Authorization: user.id, // 사용자 ID만 전송
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      await axios({
+        method: "POST",
+        url: `${PUT_PDF_LAMBDA_URL}?action=saveFileMetadata&method=POST`,
+        data: fileMetadata,
+        headers: {
+          Authorization: user.id, // 사용자 ID만 전송
+          "Content-Type": "application/json",
+        },
+      });
       window.console.warn("메타데이터 저장 완료");
 
       // 업로드 성공 후 파일 URL 가져오기
       window.console.warn(
         `업로드된 파일 정보 가져오기: ${fileMetadata.fileId}`
       );
-      const getFileResponse = await axios.get(
-        `${PUT_PDF_LAMBDA_URL}?action=getUploadedFile&fileId=${encodeURIComponent(
+      const getFileResponse = await axios({
+        method: "GET",
+        url: `${PUT_PDF_LAMBDA_URL}?action=getUploadedFile&method=GET&fileId=${encodeURIComponent(
           fileMetadata.fileId
         )}`,
-        {
-          headers: {
-            authorization: user.id, // 사용자 ID만 전송
-          },
-        }
-      );
+        headers: {
+          authorization: user.id, // 사용자 ID만 전송
+        },
+      });
 
       window.console.warn("업로드된 파일 URL:", getFileResponse.data.url);
       onSetPdfContent(getFileResponse.data.url, getFileResponse.data.metadata);
