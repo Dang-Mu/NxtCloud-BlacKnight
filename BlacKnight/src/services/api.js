@@ -2,15 +2,15 @@
 import axios from "axios";
 
 // Lambda 함수 URL
-const LAMBDA_URL = process.env.REACT_APP_LAMBDA_URL;
+const LAMBDA_URL = process.env.REACT_APP_TEXT_AI_LAMBDA_URL;
 
 // 기사 생성 API 호출
 export const generateArticle = async (prompt) => {
   try {
-    // 개발 모드이거나 LAMBDA_URL이 설정되지 않은 경우 목업 데이터 사용
-    if (process.env.NODE_ENV === "development" || !LAMBDA_URL) {
-      console.log("개발 모드: 목업 데이터 사용");
-      // 중요: 기사 생성인지 수정인지 명시적으로 확인
+    // LAMBDA_URL이 설정되지 않은 경우에만 목업 데이터 사용
+    if (!LAMBDA_URL) {
+      console.log(LAMBDA_URL);
+      console.log("Lambda URL이 설정되지 않음: 목업 데이터 사용");
       const isModification =
         prompt.includes("원본 기사:") && prompt.includes("수정 요청 사항:");
       return await generateMockArticle(prompt, isModification);
