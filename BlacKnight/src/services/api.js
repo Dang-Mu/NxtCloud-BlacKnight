@@ -101,7 +101,7 @@ const generateMockArticle = async (prompt, isModification) => {
     const modificationRequest = prompt.split("수정 요청 사항:")[1].trim();
 
     // 수정된 기사 반환
-    return `${title} - 수정됨
+    return `${title}
 
 ${org}는 ${comp}와 함께 혁신적인 ${proj}를 성공적으로 진행하고 있습니다. 이번 프로젝트는 ${keys} 등의 첨단 기술을 활용하여 기존 시스템의 효율성을 크게 향상시킬 전망입니다.
 

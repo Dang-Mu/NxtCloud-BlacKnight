@@ -19,13 +19,13 @@ import { saveArticle, highlightChanges } from "./utils/textUtils";
 function App({ user, onLogout }) {
   // 상태 관리
   const [pdfContent, setPdfContent] = useState(null);
-  const [article, setArticle] = useState("");
-  const [previousArticle, setPreviousArticle] = useState("");
+  const [currentArticle, setCurrentArticle] = useState(""); // ArticleSection에 표시할 기사
+  const [modifiedArticle, setModifiedArticle] = useState(""); // 수정된 기사 전문에 표시할 기사
   // 로딩 상태를 분리하여 관리
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [isModifyingArticle, setIsModifyingArticle] = useState(false);
-  // 새 기사 생성 여부를 추적하는 상태 변수 추가
-  const [isNewArticle, setIsNewArticle] = useState(true);
+  // 기사가 수정되었는지 여부 추적
+  const [isArticleModified, setIsArticleModified] = useState(false);
   const [notification, setNotification] = useState({
     show: false,
     message: "",
@@ -60,12 +60,9 @@ function App({ user, onLogout }) {
       formData.organization = user.organization;
     }
 
-    // 새 기사 생성임을 표시
-    setIsNewArticle(true);
-
-    // 기사를 새로 생성할 때 기존 기사 내용 초기화
-    // 이전 기사 정보도 초기화하여 "새로 생성된 기사" 섹션이 표시되지 않도록 함
-    setPreviousArticle("");
+    // 새 기사 생성 시 기존 상태 초기화
+    setModifiedArticle("");
+    setIsArticleModified(false);
     setHighlightedDiff("");
 
     const prompt = `
@@ -83,8 +80,7 @@ function App({ user, onLogout }) {
     try {
       const generatedArticle = await generateArticle(prompt);
       if (generatedArticle) {
-        // 기사 생성 시 이전 기사를 참조하지 않음
-        setArticle(generatedArticle);
+        setCurrentArticle(generatedArticle);
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
       }
     } catch (error) {
@@ -96,17 +92,17 @@ function App({ user, onLogout }) {
 
   // 기사 수정 처리 함수
   const handleModifyArticle = async (modificationRequest) => {
-    if (!article) {
+    if (!currentArticle) {
       showNotification("먼저 기사를 생성해주세요.", "warning");
       return;
     }
 
-    // 수정 작업임을 표시
-    setIsNewArticle(false);
+    // 기사를 수정할 소스 결정 - 이미 수정된 기사가 있다면 그것을 기반으로 수정
+    const sourceArticle = isArticleModified ? modifiedArticle : currentArticle;
 
     const prompt = `
       원본 기사:
-      ${article}
+      ${sourceArticle}
 
       수정 요청 사항:
       ${modificationRequest}
@@ -118,12 +114,18 @@ function App({ user, onLogout }) {
 
     setIsModifyingArticle(true); // 수정 버튼에만 스피너 표시
     try {
-      const modifiedArticle = await generateArticle(prompt);
-      if (modifiedArticle) {
-        setPreviousArticle(article);
-        setArticle(modifiedArticle);
+      const newModifiedArticle = await generateArticle(prompt);
+      if (newModifiedArticle) {
+        // 이미 수정된 기사가 있다면, 그 기사를 현재 기사로 이동
+        if (isArticleModified) {
+          setCurrentArticle(modifiedArticle);
+        }
+        // 새로 수정된 기사를 수정된 기사 전문에 설정
+        setModifiedArticle(newModifiedArticle);
+        setIsArticleModified(true);
+
         // 변경 사항 하이라이트
-        const diff = highlightChanges(article, modifiedArticle);
+        const diff = highlightChanges(sourceArticle, newModifiedArticle);
         setHighlightedDiff(diff);
         showNotification("흑기사가 수정을 완료했습니다.", "success");
       }
@@ -185,14 +187,14 @@ function App({ user, onLogout }) {
 
         <Row>
           <Col md={6}>
-            {/* 왼쪽 하단: 생성된 기사 */}
-            <ArticleSection article={article} />
+            {/* 왼쪽 하단: 생성된/현재 작업 중인 기사 */}
+            <ArticleSection article={currentArticle} />
           </Col>
 
           <Col md={6}>
             {/* 오른쪽 하단: 수정 요청 */}
             <ModificationSection
-              article={article}
+              article={isArticleModified ? modifiedArticle : currentArticle} // 가장 최신 기사를 수정 대상으로 사용
               highlightedDiff={highlightedDiff}
               onModifyArticle={handleModifyArticle}
               isLoading={isModifyingArticle} // 수정 버튼에만 로딩 표시
@@ -201,24 +203,23 @@ function App({ user, onLogout }) {
         </Row>
 
         {/* 수정된 기사 전문 - 실제 수정된 경우에만 표시 */}
-        {previousArticle &&
-          article &&
-          previousArticle !== article &&
-          !isNewArticle && (
-            <>
-              <h3 className="text-gray font-italic section-header">
-                수정된 기사 전문
-              </h3>
-              <hr className="divider-gray" />
-              <div className="modified-article">{article}</div>
-              <button
-                className="btn btn-outline-secondary mt-3"
-                onClick={() => saveArticle(article, "modified_article.txt")}
-              >
-                수정된 기사 다운로드
-              </button>
-            </>
-          )}
+        {isArticleModified && modifiedArticle && (
+          <>
+            <h3 className="text-gray font-italic section-header">
+              수정된 기사 전문
+            </h3>
+            <hr className="divider-gray" />
+            <div className="modified-article">{modifiedArticle}</div>
+            <button
+              className="btn btn-outline-secondary mt-3"
+              onClick={() =>
+                saveArticle(modifiedArticle, "modified_article.txt")
+              }
+            >
+              수정된 기사 다운로드
+            </button>
+          </>
+        )}
       </Container>
     </>
   );
