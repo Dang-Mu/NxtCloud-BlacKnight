@@ -10,7 +10,10 @@ export const generateArticle = async (prompt) => {
     // 개발 모드이거나 LAMBDA_URL이 설정되지 않은 경우 목업 데이터 사용
     if (process.env.NODE_ENV === "development" || !LAMBDA_URL) {
       console.log("개발 모드: 목업 데이터 사용");
-      return await generateMockArticle(prompt);
+      // 중요: 기사 생성인지 수정인지 명시적으로 확인
+      const isModification =
+        prompt.includes("원본 기사:") && prompt.includes("수정 요청 사항:");
+      return await generateMockArticle(prompt, isModification);
     }
 
     console.log("API 요청 전송:", LAMBDA_URL);
@@ -37,7 +40,10 @@ export const generateArticle = async (prompt) => {
     // 개발 환경에서는 에러 발생 시 목업 데이터 제공
     if (process.env.NODE_ENV === "development") {
       console.log("개발 모드: 오류 발생 시 목업 데이터 사용");
-      return await generateMockArticle(prompt);
+      // 중요: 기사 생성인지 수정인지 명시적으로 확인
+      const isModification =
+        prompt.includes("원본 기사:") && prompt.includes("수정 요청 사항:");
+      return await generateMockArticle(prompt, isModification);
     }
 
     // 오류 유형에 따른 메시지 설정
@@ -63,7 +69,7 @@ export const generateArticle = async (prompt) => {
 };
 
 // 목업 기사 생성 함수
-const generateMockArticle = async (prompt) => {
+const generateMockArticle = async (prompt, isModification) => {
   // API 호출 시뮬레이션을 위한 지연
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -80,9 +86,10 @@ const generateMockArticle = async (prompt) => {
   const keys = keyMatch ? keyMatch[1].trim() : "클라우드, AI, 빅데이터";
   const add = addMatch ? addMatch[1].trim() : "";
 
-  // 수정 요청 확인
-  if (prompt.includes("원본 기사:") && prompt.includes("수정 요청 사항:")) {
-    // 원본 기사에서 첫 줄 제목 가져오기
+  // 수정 요청 모드 확인 - isModification 파라미터로 명시적 구분
+  if (isModification) {
+    console.log("수정 모드로 기사 생성");
+    // 원본 기사에서 제목 가져오기
     const originalArticle = prompt
       .split("원본 기사:")[1]
       .split("수정 요청 사항:")[0]
@@ -123,10 +130,10 @@ ${
     ? "이번 프로젝트의 총 예산은 약 10억원으로, 정부 지원금과 양 기관의 매칭 펀드로 구성되어 있습니다. 이는 지난해 대비 30% 증가한 금액으로, 프로젝트의 중요성을 반영하고 있습니다."
     : ""
 }`;
-  }
-
-  // 새 기사 생성
-  return `[${proj} 성공적 진행 중]
+  } else {
+    console.log("새 기사 생성 모드");
+    // 새 기사 생성 모드 - 항상 새 기사 형식으로 반환
+    return `[${proj} 성공적 진행 중]
 
 ${org}는 ${comp}와 함께 혁신적인 ${proj}를 성공적으로 진행하고 있다고 밝혔다. 이번 프로젝트는 ${keys} 등의 첨단 기술을 활용하여 기존 시스템의 효율성을 크게 향상시킬 전망이다.
 
@@ -137,4 +144,5 @@ ${
 }특히 이번 프로젝트는 인공지능과 빅데이터 기술을 활용하여 복잡한 데이터를 분석하고 최적화된 솔루션을 제공하는 것이 핵심이다. 이를 위해 최신 클라우드 인프라를 구축하고, 고성능 AI 알고리즘을 개발하는 데 주력할 예정이다.
 
 프로젝트 첫 번째 단계는 이미 완료되었으며, 다음 단계는 내년 초에 시작될 예정이다. 양 기관은 지속적인 협력을 통해 국내 기술 발전에 기여할 것으로 기대된다.`;
+  }
 };

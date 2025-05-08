@@ -21,7 +21,11 @@ function App({ user, onLogout }) {
   const [pdfContent, setPdfContent] = useState(null);
   const [article, setArticle] = useState("");
   const [previousArticle, setPreviousArticle] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // 로딩 상태를 분리하여 관리
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [isModifyingArticle, setIsModifyingArticle] = useState(false);
+  // 새 기사 생성 여부를 추적하는 상태 변수 추가
+  const [isNewArticle, setIsNewArticle] = useState(true);
   const [notification, setNotification] = useState({
     show: false,
     message: "",
@@ -56,6 +60,14 @@ function App({ user, onLogout }) {
       formData.organization = user.organization;
     }
 
+    // 새 기사 생성임을 표시
+    setIsNewArticle(true);
+
+    // 기사를 새로 생성할 때 기존 기사 내용 초기화
+    // 이전 기사 정보도 초기화하여 "새로 생성된 기사" 섹션이 표시되지 않도록 함
+    setPreviousArticle("");
+    setHighlightedDiff("");
+
     const prompt = `
       다음 정보를 바탕으로 기사를 작성해주세요:
       형식 참고 예시: ${pdfContent}
@@ -67,18 +79,18 @@ function App({ user, onLogout }) {
       최종 결과물은 한글로 1000자 이상이어야한다
     `;
 
-    setIsLoading(true);
+    setIsGeneratingArticle(true); // 생성 버튼에만 스피너 표시
     try {
       const generatedArticle = await generateArticle(prompt);
       if (generatedArticle) {
-        setPreviousArticle(article);
+        // 기사 생성 시 이전 기사를 참조하지 않음
         setArticle(generatedArticle);
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
       }
     } catch (error) {
       showNotification(`기사 생성 중 오류 발생: ${error.message}`, "danger");
     } finally {
-      setIsLoading(false);
+      setIsGeneratingArticle(false);
     }
   };
 
@@ -88,6 +100,9 @@ function App({ user, onLogout }) {
       showNotification("먼저 기사를 생성해주세요.", "warning");
       return;
     }
+
+    // 수정 작업임을 표시
+    setIsNewArticle(false);
 
     const prompt = `
       원본 기사:
@@ -101,7 +116,7 @@ function App({ user, onLogout }) {
       최종 결과물은 한글로 1000자 이상이어야한다
     `;
 
-    setIsLoading(true);
+    setIsModifyingArticle(true); // 수정 버튼에만 스피너 표시
     try {
       const modifiedArticle = await generateArticle(prompt);
       if (modifiedArticle) {
@@ -115,7 +130,7 @@ function App({ user, onLogout }) {
     } catch (error) {
       showNotification(`기사 수정 중 오류 발생: ${error.message}`, "danger");
     } finally {
-      setIsLoading(false);
+      setIsModifyingArticle(false);
     }
   };
 
@@ -156,7 +171,7 @@ function App({ user, onLogout }) {
             {/* 오른쪽 섹션: 요구사항 입력 */}
             <RequirementsSection
               onGenerateArticle={handleGenerateArticle}
-              isLoading={isLoading}
+              isLoading={isGeneratingArticle} // 생성 버튼에만 로딩 표시
               defaultOrganization={user?.organization || ""}
             />
           </Col>
@@ -180,26 +195,30 @@ function App({ user, onLogout }) {
               article={article}
               highlightedDiff={highlightedDiff}
               onModifyArticle={handleModifyArticle}
-              isLoading={isLoading}
+              isLoading={isModifyingArticle} // 수정 버튼에만 로딩 표시
             />
           </Col>
         </Row>
 
-        {previousArticle && article && previousArticle !== article && (
-          <>
-            <h3 className="text-gray font-italic section-header">
-              수정된 기사 전문
-            </h3>
-            <hr className="divider-gray" />
-            <div className="modified-article">{article}</div>
-            <button
-              className="btn btn-outline-secondary mt-3"
-              onClick={() => saveArticle(article, "modified_article.txt")}
-            >
-              수정된 기사 다운로드
-            </button>
-          </>
-        )}
+        {/* 수정된 기사 전문 - 실제 수정된 경우에만 표시 */}
+        {previousArticle &&
+          article &&
+          previousArticle !== article &&
+          !isNewArticle && (
+            <>
+              <h3 className="text-gray font-italic section-header">
+                수정된 기사 전문
+              </h3>
+              <hr className="divider-gray" />
+              <div className="modified-article">{article}</div>
+              <button
+                className="btn btn-outline-secondary mt-3"
+                onClick={() => saveArticle(article, "modified_article.txt")}
+              >
+                수정된 기사 다운로드
+              </button>
+            </>
+          )}
       </Container>
     </>
   );
