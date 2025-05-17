@@ -13,6 +13,7 @@ const logger = {
 const RequirementsSection = ({
   onGenerateArticle,
   isLoading,
+  isDisabled, // 새로운 prop 추가
   defaultOrganization = "",
 }) => {
   const [organization, setOrganization] = useState(
@@ -83,6 +84,7 @@ const RequirementsSection = ({
             value={organization}
             onChange={(e) => setOrganization(e.target.value)}
             placeholder="예: 00대학교"
+            disabled={isDisabled} // 작업 중일 때 입력 비활성화
           />
         </Form.Group>
 
@@ -93,6 +95,7 @@ const RequirementsSection = ({
             value={project}
             onChange={(e) => setProject(e.target.value)}
             placeholder="예: AI 연구 프로젝트"
+            disabled={isDisabled} // 작업 중일 때 입력 비활성화
           />
         </Form.Group>
 
@@ -103,6 +106,7 @@ const RequirementsSection = ({
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             placeholder="예: 넥스트클라우드"
+            disabled={isDisabled} // 작업 중일 때 입력 비활성화
           />
         </Form.Group>
 
@@ -113,6 +117,7 @@ const RequirementsSection = ({
             value={keywords}
             onChange={(e) => setKeywords(e.target.value)}
             placeholder="예: 인공지능, 빅데이터, 머신러닝"
+            disabled={isDisabled} // 작업 중일 때 입력 비활성화
           />
         </Form.Group>
 
@@ -124,13 +129,14 @@ const RequirementsSection = ({
             value={additional}
             onChange={(e) => setAdditional(e.target.value)}
             placeholder="추가로 포함하고 싶은 내용을 자유롭게 작성해주세요. (예: 00대학교 총장님 성함 000이 기사에 포함되어야합니다.)"
+            disabled={isDisabled} // 작업 중일 때 입력 비활성화
           />
         </Form.Group>
 
         <Button
           variant="primary"
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || isDisabled} // isDisabled 추가
           className="mt-3"
         >
           {isLoading ? (

@@ -40,6 +40,9 @@ function App({ user, onLogout }) {
   });
   const [highlightedDiff, setHighlightedDiff] = useState("");
 
+  // API 작업 중인지 확인하는 상태값 추가 (기사 생성 또는 수정 중)
+  const isProcessing = isGeneratingArticle || isModifyingArticle;
+
   // 알림 표시 함수
   const showNotification = (message, type) => {
     setNotification({ show: true, message, type });
@@ -57,6 +60,15 @@ function App({ user, onLogout }) {
 
   // 기사 생성 처리 함수 - 콜백 함수 추가
   const handleGenerateArticle = async (formData, callback) => {
+    // 수정 작업 중이면 처리하지 않음
+    if (isProcessing) {
+      showNotification(
+        "다른 작업이 진행 중입니다. 잠시 후 다시 시도해주세요.",
+        "warning"
+      );
+      return;
+    }
+
     if (!pdfContent) {
       showNotification("PDF 소스를 먼저 선택하고 처리해주세요.", "warning");
       return;
@@ -117,6 +129,15 @@ function App({ user, onLogout }) {
 
   // 기사 수정 처리 함수 - 콜백 함수 추가
   const handleModifyArticle = async (modificationRequest, callback) => {
+    // 생성 작업 중이면 처리하지 않음
+    if (isProcessing) {
+      showNotification(
+        "다른 작업이 진행 중입니다. 잠시 후 다시 시도해주세요.",
+        "warning"
+      );
+      return;
+    }
+
     if (!currentArticle) {
       showNotification("먼저 기사를 생성해주세요.", "warning");
       return;
@@ -219,7 +240,8 @@ function App({ user, onLogout }) {
             {/* 오른쪽 섹션: 요구사항 입력 */}
             <RequirementsSection
               onGenerateArticle={handleGenerateArticle}
-              isLoading={isGeneratingArticle} // 생성 버튼에만 로딩 표시
+              isLoading={isGeneratingArticle}
+              isDisabled={isProcessing} // 작업 중일 때 비활성화
               defaultOrganization={user?.organization || ""}
             />
           </Col>
@@ -234,7 +256,10 @@ function App({ user, onLogout }) {
         <Row>
           <Col md={6}>
             {/* 왼쪽 하단: 생성된/현재 작업 중인 기사 */}
-            <ArticleSection article={currentArticle} />
+            <ArticleSection
+              article={currentArticle}
+              isDisabled={isProcessing} // 작업 중일 때 비활성화
+            />
           </Col>
 
           <Col md={6}>
@@ -243,7 +268,8 @@ function App({ user, onLogout }) {
               article={isArticleModified ? modifiedArticle : currentArticle} // 가장 최신 기사를 수정 대상으로 사용
               highlightedDiff={highlightedDiff}
               onModifyArticle={handleModifyArticle}
-              isLoading={isModifyingArticle} // 수정 버튼에만 로딩 표시
+              isLoading={isModifyingArticle}
+              isDisabled={isProcessing} // 작업 중일 때 비활성화
             />
           </Col>
         </Row>
@@ -261,6 +287,7 @@ function App({ user, onLogout }) {
               onClick={() =>
                 saveArticle(modifiedArticle, "modified_article.txt")
               }
+              disabled={isProcessing} // 작업 중일 때 비활성화
             >
               수정된 기사 다운로드
             </button>

@@ -3,7 +3,7 @@ import React from "react";
 import { Alert, Button } from "react-bootstrap";
 import { saveArticle } from "../utils/textUtils";
 
-const ArticleSection = ({ article }) => {
+const ArticleSection = ({ article, isDisabled }) => {
   return (
     <>
       <h3 className="text-gray font-italic section-header">생성된 기사</h3>
@@ -16,6 +16,7 @@ const ArticleSection = ({ article }) => {
             variant="outline-secondary"
             onClick={() => saveArticle(article, "generated_article.txt")}
             className="mt-3"
+            disabled={isDisabled} // 작업 중일 때 비활성화
           >
             기사 다운로드
           </Button>

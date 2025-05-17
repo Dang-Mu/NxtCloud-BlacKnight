@@ -15,6 +15,7 @@ const ModificationSection = ({
   highlightedDiff,
   onModifyArticle,
   isLoading,
+  isDisabled, // 새로운 prop 추가
 }) => {
   const [modificationRequest, setModificationRequest] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -64,13 +65,14 @@ const ModificationSection = ({
               rows={5}
               value={modificationRequest}
               onChange={(e) => setModificationRequest(e.target.value)}
+              disabled={isDisabled} // 작업 중일 때 입력 비활성화
             />
           </Form.Group>
 
           <Button
             variant="primary"
             type="submit"
-            disabled={isLoading || !modificationRequest}
+            disabled={isLoading || !modificationRequest || isDisabled} // isDisabled 추가
             className="mt-3"
           >
             {isLoading ? (
@@ -99,6 +101,7 @@ const ModificationSection = ({
         onHide={handleModalClose}
         article={modifiedArticle}
         onConfirm={handleConfirm}
+        isDisabled={isDisabled} // 작업 중일 때 모달 버튼도 비활성화
       />
     </>
   );
