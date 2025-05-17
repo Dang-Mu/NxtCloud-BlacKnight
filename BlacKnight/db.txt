@@ -27,5 +27,4 @@
   "version": "1",                       // 기사 버전
   "description": "text",                  // 기사 내용
   "createdAt": "2025-05-08T03:21:21.964373+00:00",  // 기사 생성일시
-  "isCurrent": True,                  // 활성화 여부
 }

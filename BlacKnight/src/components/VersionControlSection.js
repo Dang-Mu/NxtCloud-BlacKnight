@@ -1,6 +1,6 @@
 // src/components/VersionControlSection.js
 import React from "react";
-import { Button, Card, ListGroup, Badge } from "react-bootstrap";
+import { Button, Card, ListGroup } from "react-bootstrap";
 
 const VersionControlSection = ({
   versions,

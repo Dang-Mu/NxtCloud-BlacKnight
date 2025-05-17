@@ -14,7 +14,7 @@ import ModificationSection from "./components/ModificationSection";
 import VersionControlSection from "./components/VersionControlSection";
 
 // API 서비스 가져오기
-import { generateArticle } from "./services/api";
+import { generateArticle, saveArticleVersion } from "./services/api";
 import { saveArticle, highlightChanges } from "./utils/textUtils";
 
 // 로깅 유틸리티 추가
@@ -171,6 +171,20 @@ function App({ user, onLogout }) {
         setCurrentVersionIndex(0);
 
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
+
+        // DB에 기사 저장
+        try {
+          await saveArticleVersion({
+            userId: user?.id,
+            version: 1,
+            createdAt: initialVersion.timestamp,
+            article: generatedArticle,
+            desciption: jsonData, // 원문 요청 정보
+          });
+          logger.log("기사 생성 로그 API 전송 완료");
+        } catch (apiError) {
+          logger.warn("기사 생성 로그 API 전송 실패", apiError);
+        }
 
         // 콜백 함수가 제공된 경우 생성된 기사를 전달
         if (typeof callback === "function") {
