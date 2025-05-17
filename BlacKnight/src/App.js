@@ -11,6 +11,7 @@ import PDFSourceSection from "./components/PDFSourceSection";
 import RequirementsSection from "./components/RequirementsSection";
 import ArticleSection from "./components/ArticleSection";
 import ModificationSection from "./components/ModificationSection";
+import VersionControlSection from "./components/VersionControlSection";
 
 // API 서비스 가져오기
 import { generateArticle } from "./services/api";
@@ -40,6 +41,10 @@ function App({ user, onLogout }) {
   });
   const [highlightedDiff, setHighlightedDiff] = useState("");
 
+  // 버전 관리를 위한 상태 추가
+  const [versions, setVersions] = useState([]);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
+
   // API 작업 중인지 확인하는 상태값 추가 (기사 생성 또는 수정 중)
   const isProcessing = isGeneratingArticle || isModifyingArticle;
 
@@ -56,6 +61,54 @@ function App({ user, onLogout }) {
   const handleSetPdfContent = (content) => {
     setPdfContent(content);
     showNotification("PDF 소스가 선택되었습니다.", "success");
+  };
+
+  // 현재 버전 저장 함수
+  const handleSaveCurrentVersion = () => {
+    // 저장할 내용이 없는 경우
+    if (!currentArticle && !modifiedArticle) {
+      showNotification("저장할 기사가 없습니다.", "warning");
+      return;
+    }
+
+    // 현재 버전의 기사 내용
+    const articleContent = isArticleModified ? modifiedArticle : currentArticle;
+
+    // 새 버전 생성
+    const newVersion = {
+      content: articleContent,
+      timestamp: new Date().toISOString(),
+      isModified: isArticleModified,
+    };
+
+    // 버전 목록에 추가
+    const newVersions = [...versions, newVersion];
+    setVersions(newVersions);
+    setCurrentVersionIndex(newVersions.length - 1);
+
+    showNotification("버전이 저장되었습니다.", "success");
+  };
+
+  // 버전 선택 함수
+  const handleSelectVersion = (index) => {
+    if (index >= 0 && index < versions.length) {
+      const selectedVersion = versions[index];
+
+      // 선택한 버전이 수정된 버전인 경우
+      if (selectedVersion.isModified) {
+        setModifiedArticle(selectedVersion.content);
+        setIsArticleModified(true);
+      } else {
+        // 원본 기사인 경우
+        setCurrentArticle(selectedVersion.content);
+        setModifiedArticle("");
+        setIsArticleModified(false);
+        setHighlightedDiff("");
+      }
+
+      setCurrentVersionIndex(index);
+      showNotification(`버전 ${index + 1}이 로드되었습니다.`, "success");
+    }
   };
 
   // 기사 생성 처리 함수 - 콜백 함수 추가
@@ -107,6 +160,16 @@ function App({ user, onLogout }) {
         logger.log("기사 생성 성공", generatedArticle.substring(0, 50) + "...");
         logger.log("기사 생성 JSON:", jsonData);
         setCurrentArticle(generatedArticle);
+
+        // 최초 버전 생성 및 저장
+        const initialVersion = {
+          content: generatedArticle,
+          timestamp: new Date().toISOString(),
+          isModified: false,
+        };
+        setVersions([initialVersion]);
+        setCurrentVersionIndex(0);
+
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
 
         // 콜백 함수가 제공된 경우 생성된 기사를 전달
@@ -183,6 +246,17 @@ function App({ user, onLogout }) {
         // 변경 사항 하이라이트
         const diff = highlightChanges(sourceArticle, newModifiedArticle);
         setHighlightedDiff(diff);
+
+        // 새 버전 자동 생성
+        const newVersion = {
+          content: newModifiedArticle,
+          timestamp: new Date().toISOString(),
+          isModified: true,
+        };
+        const newVersions = [...versions, newVersion];
+        setVersions(newVersions);
+        setCurrentVersionIndex(newVersions.length - 1);
+
         showNotification("흑기사가 수정을 완료했습니다.", "success");
 
         // 콜백 함수가 제공된 경우 수정된 기사를 전달
@@ -284,7 +358,7 @@ function App({ user, onLogout }) {
             <hr className="divider-gray" />
             <div className="modified-article">{modifiedArticle}</div>
             <button
-              className="btn btn-outline-secondary mt-3"
+              className="btn btn-outline-secondary mt-3 mb-4"
               onClick={() =>
                 saveArticle(modifiedArticle, "modified_article.txt")
               }
@@ -293,6 +367,17 @@ function App({ user, onLogout }) {
               수정된 기사 다운로드
             </button>
           </>
+        )}
+
+        {/* 버전 관리 섹션 - 기사가 생성된 후에만 표시 */}
+        {versions.length > 0 && (
+          <VersionControlSection
+            versions={versions}
+            currentVersionIndex={currentVersionIndex}
+            onSelectVersion={handleSelectVersion}
+            onSaveCurrentVersion={handleSaveCurrentVersion}
+            isDisabled={isProcessing}
+          />
         )}
       </Container>
     </>
