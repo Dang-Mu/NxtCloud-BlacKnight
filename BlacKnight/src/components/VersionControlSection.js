@@ -6,7 +6,7 @@ const VersionControlSection = ({
   versions,
   currentVersionIndex,
   onSelectVersion,
-  onSaveCurrentVersion,
+  onCreateBranch,
   isDisabled,
 }) => {
   // 타임스탬프 포맷팅 함수
@@ -68,13 +68,13 @@ const VersionControlSection = ({
               )}
             </h5>
           </div>
-          <Button
+          {/* <Button
             variant="outline-primary"
-            onClick={onSaveCurrentVersion}
+            onClick={onCreateBranch}
             disabled={isDisabled}
           >
-            현재 버전 저장
-          </Button>
+            새로운 브랜치 생성
+          </Button> */}
         </div>
 
         <Card.Body style={{ padding: "0" }}>

@@ -65,6 +65,7 @@ const ModificationSection = ({
               rows={5}
               value={modificationRequest}
               onChange={(e) => setModificationRequest(e.target.value)}
+              placeholder="수정 요청 사항을 입력하세요"
               disabled={isDisabled} // 작업 중일 때 입력 비활성화
             />
           </Form.Group>
@@ -83,6 +84,13 @@ const ModificationSection = ({
               "수정 요청"
             )}
           </Button>
+
+          {/* 최신 버전이 아닐 때 안내 메시지 표시 */}
+          {isDisabled && (
+            <div className="text-danger mt-2 small">
+              ※ 최신 버전에서만 수정 요청이 가능합니다.
+            </div>
+          )}
 
           {highlightedDiff && (
             <div

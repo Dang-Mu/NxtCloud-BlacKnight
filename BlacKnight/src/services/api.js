@@ -52,8 +52,8 @@ export const generateArticle = async (prompt) => {
   }
 };
 
-// 기사 저장 API 호출
-export async function saveArticleVersion({
+// 생성된 기사 저장 API 호출
+export async function saveInitialArticle({
   newsId,
   originId,
   ownerId,
@@ -72,7 +72,7 @@ export async function saveArticleVersion({
     description,
   };
 
-  logger.log("saveArticleVersion 호출");
+  logger.log("saveInitialArticle 호출");
   logger.log("전송할 데이터:", JSON.stringify(payload, null, 2));
   logger.log("호출 대상 URL:", DB_LAMBDA_URL);
 
@@ -90,7 +90,50 @@ export async function saveArticleVersion({
     logger.log("기사 저장 API 응답:", response.data);
     return response.data;
   } catch (error) {
-    logger.error("saveArticleVersion 오류:", error);
+    logger.error("saveInitialArticle 오류:", error);
+    throw error;
+  }
+}
+
+// 수정된 기사 저장 API 호출
+export async function saveModifiedArticle({
+  newsId,
+  originId,
+  ownerId,
+  version,
+  createdAt,
+  content,
+  description,
+}) {
+  const payload = {
+    newsId,
+    originId,
+    ownerId,
+    version,
+    createdAt,
+    content,
+    description,
+  };
+
+  logger.log("saveInitialArticle 호출");
+  logger.log("전송할 데이터:", JSON.stringify(payload, null, 2));
+  logger.log("호출 대상 URL:", DB_LAMBDA_URL);
+
+  try {
+    const response = await axios({
+      method: "POST",
+      url: `${DB_LAMBDA_URL}?action=saveArticle&method=POST`,
+      data: payload,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: ownerId, // 사용자 인증용
+      },
+    });
+
+    logger.log("기사 저장 API 응답:", response.data);
+    return response.data;
+  } catch (error) {
+    logger.error("saveInitialArticle 오류:", error);
     throw error;
   }
 }

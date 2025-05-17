@@ -15,7 +15,11 @@ import ModificationSection from "./components/ModificationSection";
 import VersionControlSection from "./components/VersionControlSection";
 
 // API 서비스 가져오기
-import { generateArticle, saveArticleVersion } from "./services/api";
+import {
+  generateArticle,
+  saveInitialArticle,
+  saveModifiedArticle,
+} from "./services/api";
 import { saveArticle, highlightChanges } from "./utils/textUtils";
 
 // 로깅 유틸리티 추가
@@ -63,32 +67,6 @@ function App({ user, onLogout }) {
   const handleSetPdfContent = (content) => {
     setPdfContent(content);
     showNotification("PDF 소스가 선택되었습니다.", "success");
-  };
-
-  // 현재 버전 저장 함수
-  const handleSaveCurrentVersion = () => {
-    // 저장할 내용이 없는 경우
-    if (!currentArticle && !modifiedArticle) {
-      showNotification("저장할 기사가 없습니다.", "warning");
-      return;
-    }
-
-    // 현재 버전의 기사 내용
-    const articleContent = isArticleModified ? modifiedArticle : currentArticle;
-
-    // 새 버전 생성
-    const newVersion = {
-      content: articleContent,
-      timestamp: new Date().toISOString(),
-      isModified: isArticleModified,
-    };
-
-    // 버전 목록에 추가
-    const newVersions = [...versions, newVersion];
-    setVersions(newVersions);
-    setCurrentVersionIndex(newVersions.length - 1);
-
-    showNotification("버전이 저장되었습니다.", "success");
   };
 
   // 버전 선택 함수
@@ -179,7 +157,7 @@ function App({ user, onLogout }) {
 
         // DB에 기사 저장
         try {
-          await saveArticleVersion({
+          await saveInitialArticle({
             newsId,
             originId: originIdRef.current,
             ownerId: String(user?.id),
@@ -280,6 +258,22 @@ function App({ user, onLogout }) {
 
         showNotification("흑기사가 수정을 완료했습니다.", "success");
 
+        const newsId = uuidv4();
+        if (!originIdRef.current) originIdRef.current = newsId;
+
+        // DB API 호출
+        await saveModifiedArticle({
+          newsId,
+          originId: originIdRef.current,
+          ownerId: String(user?.id),
+          version: (setVersions.length + 1).toString(),
+          createdAt: new Date().toISOString(),
+          content: newModifiedArticle,
+          description: {
+            modificationRequest,
+          },
+        });
+
         // 콜백 함수가 제공된 경우 수정된 기사를 전달
         if (typeof callback === "function") {
           logger.log("수정 콜백 함수 호출");
@@ -296,6 +290,36 @@ function App({ user, onLogout }) {
       }
     } finally {
       setIsModifyingArticle(false);
+    }
+  };
+
+  // 현재 버전의 내용을 기반으로 새로운 브랜치 생성
+  const handleCreateNewBranchFromVersion = async () => {
+    const baseVersion = versions[currentVersionIndex];
+    if (!baseVersion || !baseVersion.content) {
+      showNotification("선택된 버전의 내용이 없습니다.", "warning");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const newNewsId = uuidv4();
+    originIdRef.current = newNewsId; // 새 origin으로 전환
+
+    try {
+      await saveInitialArticle({
+        newsId: newNewsId,
+        originId: originIdRef.current,
+        ownerId: String(user?.id),
+        version: "1",
+        createdAt: timestamp,
+        content: baseVersion.content,
+        description: {}, // 설명 비워두기
+      });
+
+      showNotification("새로운 브랜치가 생성되었습니다.", "success");
+    } catch (error) {
+      logger.error("새 브랜치 생성 실패", error);
+      showNotification("브랜치 생성 중 오류가 발생했습니다.", "danger");
     }
   };
 
@@ -365,7 +389,9 @@ function App({ user, onLogout }) {
               highlightedDiff={highlightedDiff}
               onModifyArticle={handleModifyArticle}
               isLoading={isModifyingArticle}
-              isDisabled={isProcessing} // 작업 중일 때 비활성화
+              isDisabled={
+                isProcessing || currentVersionIndex !== versions.length - 1
+              }
             />
           </Col>
         </Row>
@@ -396,7 +422,7 @@ function App({ user, onLogout }) {
             versions={versions}
             currentVersionIndex={currentVersionIndex}
             onSelectVersion={handleSelectVersion}
-            onSaveCurrentVersion={handleSaveCurrentVersion}
+            onCreateBranch={handleCreateNewBranchFromVersion}
             isDisabled={isProcessing}
           />
         )}
