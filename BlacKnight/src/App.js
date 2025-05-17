@@ -115,8 +115,8 @@ function App({ user, onLogout }) {
     }
   };
 
-  // 기사 수정 처리 함수
-  const handleModifyArticle = async (modificationRequest) => {
+  // 기사 수정 처리 함수 - 콜백 함수 추가
+  const handleModifyArticle = async (modificationRequest, callback) => {
     if (!currentArticle) {
       showNotification("먼저 기사를 생성해주세요.", "warning");
       return;
@@ -162,10 +162,21 @@ function App({ user, onLogout }) {
         const diff = highlightChanges(sourceArticle, newModifiedArticle);
         setHighlightedDiff(diff);
         showNotification("흑기사가 수정을 완료했습니다.", "success");
+
+        // 콜백 함수가 제공된 경우 수정된 기사를 전달
+        if (typeof callback === "function") {
+          logger.log("수정 콜백 함수 호출");
+          callback(newModifiedArticle);
+        }
       }
     } catch (error) {
       logger.error("기사 수정 실패", error);
       showNotification(`기사 수정 중 오류 발생: ${error.message}`, "danger");
+
+      // 에러 발생 시 콜백에 null 전달
+      if (typeof callback === "function") {
+        callback(null);
+      }
     } finally {
       setIsModifyingArticle(false);
     }
