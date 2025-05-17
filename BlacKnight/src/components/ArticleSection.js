@@ -3,8 +3,7 @@ import React from "react";
 import { Alert, Button } from "react-bootstrap";
 import { saveArticle } from "../utils/textUtils";
 
-// 모달 관련 props 제거
-const ArticleSection = ({ article, onSaveArticle }) => {
+const ArticleSection = ({ article, isDisabled }) => {
   return (
     <>
       <h3 className="text-gray font-italic section-header">생성된 기사</h3>
@@ -16,16 +15,10 @@ const ArticleSection = ({ article, onSaveArticle }) => {
           <Button
             variant="outline-secondary"
             onClick={() => saveArticle(article, "generated_article.txt")}
-            className="mt-3 me-2"
+            className="mt-3"
+            disabled={isDisabled} // 작업 중일 때 비활성화
           >
             기사 다운로드
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onSaveArticle}
-            className="mt-3"
-          >
-            기사 저장
           </Button>
         </>
       ) : (
