@@ -37,20 +37,42 @@ const RequirementsSection = ({
     }
   }, [defaultOrganization]);
 
+  // 키워드 문자열을 배열로 변환하는 함수
+  const parseKeywords = (keywordsString) => {
+    if (!keywordsString || keywordsString.trim() === "") {
+      return [];
+    }
+
+    // 쉼표(,)로 구분하여 배열로 변환하고 각 항목의 앞뒤 공백 제거
+    return keywordsString
+      .split(",")
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword !== ""); // 빈 문자열 제거
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // 키워드를 배열로 변환
+    const keywordsArray = parseKeywords(keywords);
+
+    // JSON으로 변환될 폼 데이터 객체 생성
     const formData = {
       organization,
       project,
       company,
-      keywords,
+      keywords: keywordsArray, // 배열로 변환된 키워드
       additional,
     };
 
-    logger.log("기사 생성 요청:", formData);
+    // JSON 문자열로 변환
+    const jsonData = JSON.stringify(formData);
+
+    logger.log("기사 생성 요청 (JSON):", jsonData);
 
     // 콜백 함수를 통해 생성된 기사를 받음
-    onGenerateArticle(formData, (article) => {
+    // JSON 문자열과 원본 객체 둘 다 전달
+    onGenerateArticle(jsonData, formData, (article) => {
       logger.log(
         "기사 생성 완료, 모달 표시:",
         article ? article.substring(0, 50) + "..." : "기사 없음"
@@ -119,6 +141,9 @@ const RequirementsSection = ({
             placeholder="예: 인공지능, 빅데이터, 머신러닝"
             disabled={isDisabled} // 작업 중일 때 입력 비활성화
           />
+          <Form.Text className="text-muted">
+            쉼표(,)로 구분하여 여러 키워드를 입력할 수 있습니다.
+          </Form.Text>
         </Form.Group>
 
         <Form.Group className="mb-3">

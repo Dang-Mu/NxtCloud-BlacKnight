@@ -59,7 +59,7 @@ function App({ user, onLogout }) {
   };
 
   // 기사 생성 처리 함수 - 콜백 함수 추가
-  const handleGenerateArticle = async (formData, callback) => {
+  const handleGenerateArticle = async (jsonData, formData, callback) => {
     // 수정 작업 중이면 처리하지 않음
     if (isProcessing) {
       showNotification(
@@ -105,6 +105,7 @@ function App({ user, onLogout }) {
       const generatedArticle = await generateArticle(prompt);
       if (generatedArticle) {
         logger.log("기사 생성 성공", generatedArticle.substring(0, 50) + "...");
+        logger.log("기사 생성 JSON:", jsonData);
         setCurrentArticle(generatedArticle);
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
 
