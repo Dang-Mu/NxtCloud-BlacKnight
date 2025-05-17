@@ -44,34 +44,36 @@ def lambda_handler(event, context):
 
         logger.info(f"[ARTICLE] 사용자 정보: {json.dumps(user_info)}")
         
-        # HTTP 메서드 및 리소스 경로 확인
-        http_method = event.get('httpMethod', '')
-        resource_path = event.get('resource', '')
+        # 쿼리 파라미터에서 액션 가져오기
+        query_params = event.get('queryStringParameters', {}) or {}
+
+        # HTTP 메서드에 따라 다른 처리
+        http_method = query_params.get('method', '')
+        action = query_params.get('action', '')
         
         # 경로 매개변수
         path_parameters = event.get('pathParameters', {}) or {}
         
-        logger.info(f"[ARTICLE] HTTP 메서드: {http_method}, 리소스 경로: {resource_path}")
+        logger.info(f"[ARTICLE] HTTP 메서드: {http_method}, 리소스 경로: {action}")
 
         # HTTP 메서드 및 경로에 따른 처리
-        if http_method == 'POST' and resource_path == '/articles':
-            # 기사 저장
+        if http_method == 'POST' and query_params.get('action') == 'saveArticle':
             body = json.loads(event.get('body', '{}'))
             return save_article(user_info, body, headers)
-        elif http_method == 'GET' and resource_path == '/articles/user/{ownerId}':
+        elif http_method == 'GET' and action == '/articles/user/{ownerId}':
             # 사용자별 기사 목록 조회
             user_id = path_parameters.get('ownerId', '')
             return get_user_articles(user_info, user_id, headers)
-        elif http_method == 'GET' and resource_path == '/articles/{originId}/version':
+        elif http_method == 'GET' and action == '/articles/{originId}/version':
             # 기사 버전 목록 조회
             article_id = path_parameters.get('originId', '')
             return get_article_version(user_info, article_id, headers)
-        elif http_method == 'GET' and resource_path == '/articles/version/{versionId}':
+        elif http_method == 'GET' and action == '/articles/version/{versionId}':
             # 특정 버전 조회
             version_id = path_parameters.get('versionId', '')
             return get_article_version(user_info, version_id, headers)
         else:
-            logger.warning(f"[ARTICLE] 지원하지 않는 경로 또는 메서드: {http_method} {resource_path}")
+            logger.warning(f"[ARTICLE] 지원하지 않는 경로 또는 메서드: {http_method} {action}")
             return {
                 'statusCode': 400,
                 'headers': headers,

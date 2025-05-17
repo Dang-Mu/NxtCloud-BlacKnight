@@ -79,11 +79,11 @@ export async function saveArticleVersion({
   try {
     const response = await axios({
       method: "POST",
-      url: DB_LAMBDA_URL,
+      url: `${DB_LAMBDA_URL}?action=saveArticle&method=POST`,
       data: payload,
       headers: {
         "Content-Type": "application/json",
-        Authorization: ownerId, // 토큰 기반 인증
+        Authorization: ownerId, // 사용자 인증용
       },
     });
 
