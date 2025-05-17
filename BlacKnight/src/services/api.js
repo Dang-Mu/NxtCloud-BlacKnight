@@ -4,20 +4,26 @@ import axios from "axios";
 // Lambda 함수 URL
 const LAMBDA_URL = process.env.REACT_APP_TEXT_AI_LAMBDA_URL;
 
+// 프로덕션 환경에서는 로깅 비활성화
+const logger = {
+  log: process.env.NODE_ENV === "production" ? () => {} : console.log,
+  warn: process.env.NODE_ENV === "production" ? () => {} : console.warn,
+  error: process.env.NODE_ENV === "production" ? () => {} : console.error,
+};
+
 // 기사 생성 API 호출
 export const generateArticle = async (prompt) => {
   try {
     // LAMBDA_URL이 설정되지 않은 경우에만 목업 데이터 사용
     if (!LAMBDA_URL) {
-      console.log(LAMBDA_URL);
-      console.log("Lambda URL이 설정되지 않음: 목업 데이터 사용");
+      logger.log("Lambda URL이 설정되지 않음: 목업 데이터 사용");
       const isModification =
         prompt.includes("원본 기사:") && prompt.includes("수정 요청 사항:");
       return await generateMockArticle(prompt, isModification);
     }
 
-    console.log("API 요청 전송:", LAMBDA_URL);
-    console.log("요청 데이터:", { prompt });
+    logger.log("API 요청 전송:", LAMBDA_URL);
+    logger.log("요청 데이터:", { prompt });
 
     const response = await axios.post(
       LAMBDA_URL,
@@ -31,15 +37,15 @@ export const generateArticle = async (prompt) => {
       }
     );
 
-    console.log("API 응답:", response);
+    logger.log("API 응답:", response);
 
     return response.data.output;
   } catch (error) {
-    console.error("API 호출 오류:", error);
+    logger.error("API 호출 오류:", error);
 
     // 개발 환경에서는 에러 발생 시 목업 데이터 제공
     if (process.env.NODE_ENV === "development") {
-      console.log("개발 모드: 오류 발생 시 목업 데이터 사용");
+      logger.log("개발 모드: 오류 발생 시 목업 데이터 사용");
       // 중요: 기사 생성인지 수정인지 명시적으로 확인
       const isModification =
         prompt.includes("원본 기사:") && prompt.includes("수정 요청 사항:");
@@ -49,8 +55,8 @@ export const generateArticle = async (prompt) => {
     // 오류 유형에 따른 메시지 설정
     if (error.response) {
       // 서버 응답을 받았지만 2xx 범위가 아닌 상태 코드
-      console.error("응답 데이터:", error.response.data);
-      console.error("응답 상태:", error.response.status);
+      logger.error("응답 데이터:", error.response.data);
+      logger.error("응답 상태:", error.response.status);
       throw new Error(
         `서버 오류 (${error.response.status}): ${
           error.response.data.message || "서버에서 오류가 발생했습니다."
@@ -88,7 +94,7 @@ const generateMockArticle = async (prompt, isModification) => {
 
   // 수정 요청 모드 확인 - isModification 파라미터로 명시적 구분
   if (isModification) {
-    console.log("수정 모드로 기사 생성");
+    logger.log("수정 모드로 기사 생성");
     // 원본 기사에서 제목 가져오기
     const originalArticle = prompt
       .split("원본 기사:")[1]
@@ -131,7 +137,7 @@ ${
     : ""
 }`;
   } else {
-    console.log("새 기사 생성 모드");
+    logger.log("새 기사 생성 모드");
     // 새 기사 생성 모드 - 항상 새 기사 형식으로 반환
     return `[${proj} 성공적 진행 중]
 

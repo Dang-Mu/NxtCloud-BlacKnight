@@ -1,9 +1,17 @@
 // src/App.js
 import React, { useState } from "react";
-import { Container, Row, Col, Alert, Button, Modal } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Alert,
+  Button,
+  Modal,
+  Spinner,
+} from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 // 컴포넌트 가져오기
 import Header from "./components/Header";
@@ -42,10 +50,11 @@ function App({ user, onLogout }) {
     type: "",
   });
   const [highlightedDiff, setHighlightedDiff] = useState("");
-  
+
   // 새로 추가된 상태
   const [articleVersions, setArticleVersions] = useState([]); // 기사 버전 관리
   const [showModifyConfirm, setShowModifyConfirm] = useState(false); // 수정 확인 모달 상태
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false); // 저장 확인 모달 상태 (추가)
   const [isNewArticle, setIsNewArticle] = useState(false); // 새 기사가 생성되었는지 여부
   const [currentVersionId, setCurrentVersionId] = useState(null); // 현재 작업 중인 버전 ID
 
@@ -83,10 +92,11 @@ function App({ user, onLogout }) {
     setHighlightedDiff("");
     setArticleVersions([]);
     setCurrentVersionId(null);
-    
+
     // 새 기사 생성 시 모달 표시 상태도 초기화
     setIsNewArticle(false);
     setShowModifyConfirm(false);
+    setShowSaveConfirm(false); // 저장 모달도 초기화 (추가)
 
     const prompt = `
       다음 정보를 바탕으로 기사를 작성해주세요:
@@ -103,7 +113,7 @@ function App({ user, onLogout }) {
     try {
       const generatedArticle = await generateArticle(prompt);
       console.log("기사 생성 성공:", !!generatedArticle);
-      
+
       if (generatedArticle) {
         // 순서 중요: 먼저 기사 내용 설정 후 팝업 상태 설정
         setCurrentArticle(generatedArticle);
@@ -156,21 +166,21 @@ function App({ user, onLogout }) {
         // 변경 사항 하이라이트
         const diff = highlightChanges(sourceArticle, newModifiedArticle);
         setHighlightedDiff(diff);
-        
+
         // 새 버전 ID 생성 및 버전 추가
         const newVersionId = uuidv4();
         setArticleVersions([
           ...articleVersions,
-          { 
-            id: newVersionId, 
+          {
+            id: newVersionId,
             content: newModifiedArticle,
             timestamp: new Date().toISOString(),
             userId: user?.id,
-            organization: user?.organization 
-          }
+            organization: user?.organization,
+          },
         ]);
         setCurrentVersionId(newVersionId);
-        
+
         // DB에 새 버전 저장
         await saveArticleToDatabase({
           id: newVersionId,
@@ -178,10 +188,13 @@ function App({ user, onLogout }) {
           userId: user?.id,
           organization: user?.organization,
           timestamp: new Date().toISOString(),
-          isLatest: true
+          isLatest: true,
         });
-        
-        showNotification("흑기사가 수정을 완료했습니다. 새 버전이 저장되었습니다.", "success");
+
+        showNotification(
+          "흑기사가 수정을 완료했습니다. 새 버전이 저장되었습니다.",
+          "success"
+        );
       }
     } catch (error) {
       showNotification(`기사 수정 중 오류 발생: ${error.message}`, "danger");
@@ -193,63 +206,72 @@ function App({ user, onLogout }) {
   // 기사 수정 확인 처리 함수
   const handleConfirmModify = async (shouldModify) => {
     console.log("기사 수정 확인 처리:", { shouldModify });
-    
+
     setShowModifyConfirm(false);
-    setIsNewArticle(false); // 확인 후에는 더 이상 새 기사가 아님
-    
+
     if (shouldModify) {
       // 사용자가 '예'를 선택했을 때 - 수정 섹션으로 포커스 이동
+      setIsNewArticle(false); // 확인 후에는 더 이상 새 기사가 아님
       showNotification("수정 섹션에서 요청 사항을 입력해주세요.", "info");
       // 포커스 이동 로직
       setTimeout(() => {
-        const modificationSection = document.querySelector('.section-header');
+        const modificationSection = document.querySelector(".section-header");
         if (modificationSection) {
-          modificationSection.scrollIntoView({ behavior: 'smooth' });
+          modificationSection.scrollIntoView({ behavior: "smooth" });
         } else {
           console.log("수정 섹션 요소를 찾을 수 없습니다");
           // 대안으로 스크롤 위치 지정
           window.scrollTo({
             top: document.body.scrollHeight / 2,
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         }
       }, 300);
     } else {
-      // 사용자가 '아니오'를 선택했을 때 - 기사 DB에 저장
+      // 사용자가 '아니오'를 선택했을 때 - 저장 확인 모달 표시 (변경)
+      setShowSaveConfirm(true);
+    }
+  };
+
+  // 기사 저장 확인 처리 함수 (추가)
+  const handleConfirmSave = async (shouldSave) => {
+    setShowSaveConfirm(false);
+
+    if (shouldSave) {
+      // 사용자가 '예'를 선택했을 때 - 기사 DB에 저장
       try {
         console.log("기사 저장 시작");
         setIsSavingArticle(true);
         const articleId = uuidv4();
-        
-        // saveArticleToDatabase 함수가 제대로 구현되었는지 확인
-        console.log("DB 저장 요청:", {
-          id: articleId,
-          contentLength: currentArticle.length,
-          userId: user?.id,
-          organization: user?.organization
-        });
-        
+
+        // 저장할 기사 내용 결정
+        const articleToSave = isArticleModified
+          ? modifiedArticle
+          : currentArticle;
+
         await saveArticleToDatabase({
           id: articleId,
-          content: currentArticle,
+          content: articleToSave,
           userId: user?.id,
           organization: user?.organization,
           timestamp: new Date().toISOString(),
-          isLatest: true
+          isLatest: true,
         });
-        
+
         // 버전 목록에 추가
         setArticleVersions([
+          ...articleVersions,
           {
             id: articleId,
-            content: currentArticle,
+            content: articleToSave,
             timestamp: new Date().toISOString(),
             userId: user?.id,
-            organization: user?.organization
-          }
+            organization: user?.organization,
+          },
         ]);
         setCurrentVersionId(articleId);
-        
+        setIsNewArticle(false); // 저장 후에는 더 이상 새 기사가 아님
+
         showNotification("기사가 저장되었습니다.", "success");
       } catch (error) {
         console.error("기사 저장 오류:", error);
@@ -257,47 +279,80 @@ function App({ user, onLogout }) {
       } finally {
         setIsSavingArticle(false);
       }
+    } else {
+      // 사용자가 '아니오'를 선택했을 때 - 원래 상태로 초기화 (추가)
+      if (isNewArticle) {
+        // 새 기사인 경우 - 기사 생성 상태를 초기화
+        setCurrentArticle("");
+        setIsNewArticle(false);
+        showNotification("기사 저장이 취소되었습니다.", "info");
+      }
+      // 저장 취소 - 아무 액션도 취하지 않음
     }
   };
 
-  // 기사 DB 저장 함수
-  const handleSaveArticle = async () => {
-    try {
-      setIsSavingArticle(true);
-      
-      // 현재 표시되고 있는 기사 내용 결정
-      const articleToSave = isArticleModified ? modifiedArticle : currentArticle;
-      
-      // UUID 생성 및 저장
-      const articleId = uuidv4();
-      await saveArticleToDatabase({
-        id: articleId,
-        content: articleToSave,
-        userId: user?.id,
-        organization: user?.organization,
-        timestamp: new Date().toISOString(),
-        isLatest: true
-      });
-      
-      // 버전 관리 목록에 추가
-      setArticleVersions([
-        ...articleVersions,
-        {
-          id: articleId,
-          content: articleToSave,
-          timestamp: new Date().toISOString(),
-          userId: user?.id,
-          organization: user?.organization
-        }
-      ]);
-      setCurrentVersionId(articleId);
-      
-      showNotification("기사가 성공적으로 저장되었습니다.", "success");
-    } catch (error) {
-      showNotification(`기사 저장 중 오류 발생: ${error.message}`, "danger");
-    } finally {
-      setIsSavingArticle(false);
-    }
+  // 기사 DB 저장 함수 - 저장 버튼 클릭 시
+  const handleSaveArticle = () => {
+    // 저장 확인 모달 표시로 변경
+    setShowSaveConfirm(true);
+  };
+
+  // 모달 컴포넌트를 재사용하기 위한 함수 (추가)
+  const renderArticleModal = (show, title, article, onConfirm, onReject) => {
+    const isModifyModal = title === "기사 수정 확인";
+    const isSaveModal = title === "기사 저장 확인";
+
+    return (
+      <Modal
+        show={show}
+        onHide={() => onReject(false)}
+        backdrop="static"
+        keyboard={false}
+        centered
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            {isModifyModal
+              ? "생성된 기사를 수정하시겠습니까?"
+              : "생성된 기사를 저장하시겠습니까?"}
+          </p>
+          <div
+            className="generated-article-preview mt-3 p-3"
+            style={{
+              maxHeight: "400px",
+              overflow: "auto",
+              border: "1px solid #dee2e6",
+              borderRadius: "4px",
+              backgroundColor: "#f8f9fa",
+            }}
+          >
+            {article}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => onReject(false)}>
+            아니오
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => onConfirm(true)}
+            disabled={isSaveModal && isSavingArticle}
+          >
+            {isSaveModal && isSavingArticle ? (
+              <>
+                <Spinner animation="border" size="sm" /> 저장 중...
+              </>
+            ) : (
+              "예"
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    );
   };
 
   return (
@@ -339,6 +394,7 @@ function App({ user, onLogout }) {
               onGenerateArticle={handleGenerateArticle}
               isLoading={isGeneratingArticle} // 생성 버튼에만 로딩 표시
               defaultOrganization={user?.organization || ""}
+              user={user} // user 정보 전달 (추가)
             />
           </Col>
         </Row>
@@ -348,29 +404,40 @@ function App({ user, onLogout }) {
         {notification.show && (
           <Alert variant={notification.type}>{notification.message}</Alert>
         )}
-        
-        {process.env.NODE_ENV !== 'production' && (
-          <div className="debug-buttons mb-2" style={{ display: 'flex', gap: '10px' }}>
-            <Button 
-              variant="outline-secondary" 
+
+        {process.env.NODE_ENV !== "production" && (
+          <div
+            className="debug-buttons mb-2"
+            style={{ display: "flex", gap: "10px" }}
+          >
+            <Button
+              variant="outline-secondary"
               size="sm"
               onClick={() => {
-                console.log("Current state:", { 
-                  currentArticle: !!currentArticle, 
-                  isNewArticle, 
+                console.log("Current state:", {
+                  currentArticle: !!currentArticle,
+                  isNewArticle,
                   showModifyConfirm,
-                  articleVersions
+                  showSaveConfirm,
+                  articleVersions,
                 });
               }}
             >
               상태 로깅
             </Button>
-            <Button 
-              variant="outline-secondary" 
+            <Button
+              variant="outline-secondary"
               size="sm"
               onClick={() => setShowModifyConfirm(true)}
             >
               수정 확인 모달 표시
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setShowSaveConfirm(true)}
+            >
+              저장 확인 모달 표시
             </Button>
           </div>
         )}
@@ -378,14 +445,9 @@ function App({ user, onLogout }) {
         <Row>
           <Col md={6}>
             {/* 왼쪽 하단: 생성된/현재 작업 중인 기사 */}
-            <ArticleSection 
-              article={currentArticle} 
+            <ArticleSection
+              article={currentArticle}
               onSaveArticle={handleSaveArticle}
-              // 모달은 App.js에서만 처리하도록 props 제거
-              // showModifyConfirm={showModifyConfirm}
-              // setShowModifyConfirm={setShowModifyConfirm}
-              // isNewArticle={isNewArticle}
-              // onConfirmModify={handleConfirmModify}
             />
           </Col>
 
@@ -411,7 +473,9 @@ function App({ user, onLogout }) {
             <Button
               variant="outline-secondary"
               className="mt-3 me-2"
-              onClick={() => saveArticle(modifiedArticle, "modified_article.txt")}
+              onClick={() =>
+                saveArticle(modifiedArticle, "modified_article.txt")
+              }
             >
               수정된 기사 다운로드
             </Button>
@@ -421,11 +485,17 @@ function App({ user, onLogout }) {
               onClick={handleSaveArticle}
               disabled={isSavingArticle}
             >
-              최종 버전 저장
+              {isSavingArticle ? (
+                <>
+                  <Spinner animation="border" size="sm" /> 저장 중...
+                </>
+              ) : (
+                "최종 버전 저장"
+              )}
             </Button>
           </>
         )}
-        
+
         {/* 기사 버전 정보 - 버전이 있는 경우에만 표시 */}
         {articleVersions.length > 0 && (
           <>
@@ -436,17 +506,21 @@ function App({ user, onLogout }) {
             <div className="version-history">
               <ul className="list-group">
                 {articleVersions.map((version, index) => (
-                  <li 
-                    key={version.id} 
-                    className={`list-group-item ${currentVersionId === version.id ? 'active' : ''}`}
+                  <li
+                    key={version.id}
+                    className={`list-group-item ${
+                      currentVersionId === version.id ? "active" : ""
+                    }`}
                   >
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
                         <strong>버전 {articleVersions.length - index}</strong>
-                        {currentVersionId === version.id && <span className="ms-2">(현재 버전)</span>}
+                        {currentVersionId === version.id && (
+                          <span className="ms-2">(현재 버전)</span>
+                        )}
                       </div>
                       <div className="text-muted small">
-                        {new Date(version.timestamp).toLocaleString('ko-KR')}
+                        {new Date(version.timestamp).toLocaleString("ko-KR")}
                       </div>
                     </div>
                   </li>
@@ -455,40 +529,23 @@ function App({ user, onLogout }) {
             </div>
           </>
         )}
-        
-        {/* 기사 수정 확인 모달 - App.js에 직접 추가하는 방식 */}
-        <Modal 
-          show={showModifyConfirm} 
-          onHide={() => handleConfirmModify(false)}
-          backdrop="static"
-          keyboard={false}
-          centered
-          size="lg"
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>기사 수정 확인</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>생성된 기사를 수정하시겠습니까?</p>
-            <div className="generated-article-preview mt-3 p-3" style={{ 
-              maxHeight: '400px', 
-              overflow: 'auto', 
-              border: '1px solid #dee2e6',
-              borderRadius: '4px',
-              backgroundColor: '#f8f9fa'
-            }}>
-              {currentArticle}
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => handleConfirmModify(false)}>
-              아니오
-            </Button>
-            <Button variant="primary" onClick={() => handleConfirmModify(true)}>
-              예
-            </Button>
-          </Modal.Footer>
-        </Modal>
+
+        {/* 재사용 가능한 모달 컴포넌트 사용 (코드 재사용) */}
+        {renderArticleModal(
+          showModifyConfirm,
+          "기사 수정 확인",
+          currentArticle,
+          handleConfirmModify,
+          () => setShowModifyConfirm(false)
+        )}
+
+        {renderArticleModal(
+          showSaveConfirm,
+          "기사 저장 확인",
+          isArticleModified ? modifiedArticle : currentArticle,
+          handleConfirmSave,
+          handleConfirmSave // '아니오'를 클릭해도 동일 함수로 처리(shouldSave=false로 전달)
+        )}
       </Container>
     </>
   );
