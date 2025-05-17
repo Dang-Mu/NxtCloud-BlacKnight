@@ -17,3 +17,15 @@
   "isPublic": false,                        // 조직 내 공유 여부
   "description": "기본 연차휴가신청서 양식",
 }
+
+# ella-blacknight-news
+{
+  "newsId": "UUID",                     // 파티션 키
+  "articleId": "newsId",                // 원본 기사 = version1 기사
+  "content": "text",                    // 기사 내용
+  "ownerId": "1",                       // 기사 작성자
+  "version": "1",                       // 기사 버전
+  "description": "text",                  // 기사 내용
+  "createdAt": "2025-05-08T03:21:21.964373+00:00",  // 기사 생성일시
+  "isCurrent": True,                  // 활성화 여부
+}
