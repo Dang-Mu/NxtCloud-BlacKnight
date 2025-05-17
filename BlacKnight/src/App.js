@@ -1,6 +1,7 @@
 // src/App.js
 import React, { useState } from "react";
 import { Container, Row, Col, Alert } from "react-bootstrap";
+import { v4 as uuidv4 } from "uuid";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 
@@ -47,6 +48,9 @@ function App({ user, onLogout }) {
 
   // API 작업 중인지 확인하는 상태값 추가 (기사 생성 또는 수정 중)
   const isProcessing = isGeneratingArticle || isModifyingArticle;
+
+  // 기사 생성 및 수정 시 사용되는 고유 ID
+  const [originId, setOriginId] = useState("");
 
   // 알림 표시 함수
   const showNotification = (message, type) => {
@@ -172,14 +176,19 @@ function App({ user, onLogout }) {
 
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
 
+        const newsId = uuidv4(); // 각 버전마다 고유 ID
+        if (!originId) setOriginId(newsId); // 최초 생성 시 originId 설정
+
         // DB에 기사 저장
         try {
           await saveArticleVersion({
-            userId: user?.id,
+            newsId,
+            originId,
+            ownerId: user?.id,
             version: 1,
             createdAt: initialVersion.timestamp,
-            article: generatedArticle,
-            desciption: jsonData, // 원문 요청 정보
+            content: generatedArticle,
+            description: jsonData, // 원문 요청 정보
           });
           logger.log("기사 생성 로그 API 전송 완료");
         } catch (apiError) {

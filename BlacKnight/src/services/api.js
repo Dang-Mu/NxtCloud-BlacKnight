@@ -54,14 +54,18 @@ export const generateArticle = async (prompt) => {
 
 // 기사 저장 API 호출
 export async function saveArticleVersion({
-  userId,
+  newsId,
+  originId,
+  ownerId,
   version,
   createdAt,
   content,
   description,
 }) {
   const payload = {
-    userId,
+    newsId,
+    originId,
+    ownerId,
     version,
     createdAt,
     content,
@@ -72,24 +76,21 @@ export async function saveArticleVersion({
   logger.log("전송할 데이터:", JSON.stringify(payload, null, 2));
   logger.log("호출 대상 URL:", DB_LAMBDA_URL);
 
-  // try {
-  //   const response = await fetch(DB_LAMBDA_URL, {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify(payload),
-  //   });
+  try {
+    const response = await axios({
+      method: "POST",
+      url: DB_LAMBDA_URL,
+      data: payload,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: ownerId, // 토큰 기반 인증
+      },
+    });
 
-  //   if (!response.ok) {
-  //     throw new Error("API 요청 실패");
-  //   }
-
-  //   const result = await response.json();
-  //   logger.log("기사 저장 API 응답:", result);
-  //   return result;
-  // } catch (error) {
-  //   logger.error("saveArticleVersion 오류:", error);
-  //   throw error;
-  // }
+    logger.log("기사 저장 API 응답:", response.data);
+    return response.data;
+  } catch (error) {
+    logger.error("saveArticleVersion 오류:", error);
+    throw error;
+  }
 }
