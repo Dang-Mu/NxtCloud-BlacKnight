@@ -32,6 +32,8 @@ const ModificationSection = ({
       );
       setModifiedArticle(updatedArticle);
       setShowModal(true);
+      // 수정 요청 텍스트 초기화
+      setModificationRequest("");
     });
   };
 
