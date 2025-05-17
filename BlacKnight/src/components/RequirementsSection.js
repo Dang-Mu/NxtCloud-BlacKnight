@@ -1,6 +1,14 @@
 // src/components/RequirementsSection.js
 import React, { useState, useEffect } from "react";
 import { Form, Button, Spinner } from "react-bootstrap";
+import ArticleModal from "./ArticleModal";
+
+// 로깅 유틸리티 추가
+const logger = {
+  log: process.env.NODE_ENV === "production" ? () => {} : console.log,
+  warn: process.env.NODE_ENV === "production" ? () => {} : console.warn,
+  error: process.env.NODE_ENV === "production" ? () => {} : console.error,
+};
 
 const RequirementsSection = ({
   onGenerateArticle,
@@ -10,7 +18,7 @@ const RequirementsSection = ({
   const [organization, setOrganization] = useState(
     defaultOrganization || "00대학교"
   );
-  const [project, setProject] = useState("2024 클라우드 AI 연구 프로젝트");
+  const [project, setProject] = useState("2025 클라우드 AI 연구 프로젝트");
   const [company, setCompany] = useState("넥스트클라우드");
   const [keywords, setKeywords] = useState(
     "클라우드, AI, 빅데이터, AWS, Bedrock"
@@ -18,6 +26,8 @@ const RequirementsSection = ({
   const [additional, setAdditional] = useState(
     "00대학교 총장님 성함 000이 기사에 포함되어야합니다."
   );
+  const [showModal, setShowModal] = useState(false);
+  const [generatedArticle, setGeneratedArticle] = useState(null);
 
   // 사용자 조직이 변경되면 폼 값도 업데이트
   useEffect(() => {
@@ -28,13 +38,36 @@ const RequirementsSection = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onGenerateArticle({
+    const formData = {
       organization,
       project,
       company,
       keywords,
       additional,
+    };
+
+    logger.log("기사 생성 요청:", formData);
+
+    // 콜백 함수를 통해 생성된 기사를 받음
+    onGenerateArticle(formData, (article) => {
+      logger.log(
+        "기사 생성 완료, 모달 표시:",
+        article ? article.substring(0, 50) + "..." : "기사 없음"
+      );
+      setGeneratedArticle(article);
+      setShowModal(true);
     });
+  };
+
+  const handleModalClose = () => {
+    logger.log("모달 닫기");
+    setShowModal(false);
+  };
+
+  const handleConfirm = () => {
+    logger.log("기사 확인");
+    setShowModal(false);
+    // 필요한 경우 부모 컴포넌트에 확인 이벤트 전달
   };
 
   return (
@@ -109,6 +142,14 @@ const RequirementsSection = ({
           )}
         </Button>
       </Form>
+
+      {/* 모달 컴포넌트 */}
+      <ArticleModal
+        show={showModal}
+        onHide={handleModalClose}
+        article={generatedArticle}
+        onConfirm={handleConfirm}
+      />
     </>
   );
 };

@@ -16,6 +16,13 @@ import ModificationSection from "./components/ModificationSection";
 import { generateArticle } from "./services/api";
 import { saveArticle, highlightChanges } from "./utils/textUtils";
 
+// 로깅 유틸리티 추가
+const logger = {
+  log: process.env.NODE_ENV === "production" ? () => {} : console.log,
+  warn: process.env.NODE_ENV === "production" ? () => {} : console.warn,
+  error: process.env.NODE_ENV === "production" ? () => {} : console.error,
+};
+
 function App({ user, onLogout }) {
   // 상태 관리
   const [pdfContent, setPdfContent] = useState(null);
@@ -48,8 +55,8 @@ function App({ user, onLogout }) {
     showNotification("PDF 소스가 선택되었습니다.", "success");
   };
 
-  // 기사 생성 처리 함수
-  const handleGenerateArticle = async (formData) => {
+  // 기사 생성 처리 함수 - 콜백 함수 추가
+  const handleGenerateArticle = async (formData, callback) => {
     if (!pdfContent) {
       showNotification("PDF 소스를 먼저 선택하고 처리해주세요.", "warning");
       return;
@@ -76,15 +83,33 @@ function App({ user, onLogout }) {
       최종 결과물은 한글로 1000자 이상이어야한다
     `;
 
+    logger.log("기사 생성 시작", {
+      organization: formData.organization,
+      project: formData.project,
+    });
     setIsGeneratingArticle(true); // 생성 버튼에만 스피너 표시
+
     try {
       const generatedArticle = await generateArticle(prompt);
       if (generatedArticle) {
+        logger.log("기사 생성 성공", generatedArticle.substring(0, 50) + "...");
         setCurrentArticle(generatedArticle);
         showNotification("흑기사가 초안 작성을 완료하였습니다.", "success");
+
+        // 콜백 함수가 제공된 경우 생성된 기사를 전달
+        if (typeof callback === "function") {
+          logger.log("콜백 함수 호출");
+          callback(generatedArticle);
+        }
       }
     } catch (error) {
+      logger.error("기사 생성 실패", error);
       showNotification(`기사 생성 중 오류 발생: ${error.message}`, "danger");
+
+      // 에러 발생 시 콜백에 null 전달
+      if (typeof callback === "function") {
+        callback(null);
+      }
     } finally {
       setIsGeneratingArticle(false);
     }
@@ -112,10 +137,19 @@ function App({ user, onLogout }) {
       최종 결과물은 한글로 1000자 이상이어야한다
     `;
 
+    logger.log("기사 수정 시작", {
+      수정요청: modificationRequest.substring(0, 50) + "...",
+    });
     setIsModifyingArticle(true); // 수정 버튼에만 스피너 표시
+
     try {
       const newModifiedArticle = await generateArticle(prompt);
       if (newModifiedArticle) {
+        logger.log(
+          "기사 수정 성공",
+          newModifiedArticle.substring(0, 50) + "..."
+        );
+
         // 이미 수정된 기사가 있다면, 그 기사를 현재 기사로 이동
         if (isArticleModified) {
           setCurrentArticle(modifiedArticle);
@@ -130,6 +164,7 @@ function App({ user, onLogout }) {
         showNotification("흑기사가 수정을 완료했습니다.", "success");
       }
     } catch (error) {
+      logger.error("기사 수정 실패", error);
       showNotification(`기사 수정 중 오류 발생: ${error.message}`, "danger");
     } finally {
       setIsModifyingArticle(false);
